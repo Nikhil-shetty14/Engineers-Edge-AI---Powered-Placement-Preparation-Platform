@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper functions available to all rules
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * Users collection and all nested subcollections:
+     * - /users/{userId}/aptitudeTestAttempts
+     * - /users/{userId}/quizAttempts
+     * - /users/{userId}/generatedResumes
+     * - /users/{userId}/projectSuggestions
+     * - /users/{userId}/notes
+     * - /users/{userId}/resumes
+     * - /users/{userId}/suggestedJobs
+     */
+    match /users/{userId} {
+      allow read, write: if isSignedIn() && isOwner(userId);
+
+      match /{allSubcollections=**} {
+        allow read, write: if isSignedIn() && isOwner(userId);
+      }
+    }
+
+    /**
+     * Courses catalog (publicly readable, writable by signed-in users)
+     */
+    match /courses/{courseId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+
+    /**
+     * Jobs catalog (publicly readable, writable by signed-in users)
+     */
+    match /jobs/{jobId} {
+      allow read: if true;
+      allow write: if isSignedIn();
+    }
+  }
+}
